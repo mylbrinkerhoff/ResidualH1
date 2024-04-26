@@ -33,6 +33,7 @@
 \usepackage{multicol} %Multicolumn text
 \usepackage{enumitem} %Allows for continuous numbering of lists over examples, etc.
 \usepackage{multirow} %Useful for combining cells in tablesbrew 
+\usepackage{booktabs}
 \usepackage{hanging}
 \usepackage{fancyhdr} %Allows for the 
 \pagestyle{fancy}
@@ -60,7 +61,7 @@
 
 %%PACKAGES FOR LINGUISTICS
 %\usepackage{OTtablx} %Generating tableaux with using TIPA
-\usepackage[noipa]{OTtablx} % Use this one generating tableaux without using TIPA
+% \usepackage[noipa]{OTtablx} % Use this one generating tableaux without using TIPA
 %\usepackage[notipa]{ot-tableau} % Another tableau drawing packing use for posters.
 % \usepackage{linguex} % Linguistic examples
 % \usepackage{langsci-linguex} % Linguistic examples
@@ -97,6 +98,9 @@
 %%MACROS
 \newcommand{\sub}[1]{\textsubscript{#1}}
 \newcommand{\supr}[1]{\textsuperscript{#1}}
+\providecommand{\lsptoprule}{\midrule\toprule}
+\providecommand{\lspbottomrule}{\bottomrule\midrule}
+\newcommand{\fittable}[1]{\resizebox{\textwidth}{!}{#1}}
 
 \makeatletter
 \renewcommand{\paragraph}{%
@@ -147,6 +151,7 @@
 \section{Santiago Laxopa Zapotec} \label{sec:SLZ}
 %------------------------------------
 
+Santiago Laxopa Zapotec is an Oto-manguean 
 
 %------------------------------------
 \section{Methodology} \label{sec:Methods}
@@ -178,7 +183,7 @@ Data was first grouped by speaker then the z-score was calculated for f0.
 If the absolute value of f0 was greater than 3, it was removed. This is because 99.7\% of the data in a normally distributed dataset lies within 3 SDs of the mean. Anything greater than 3 is likely an outlier and marked as such.
 Formants
 Data was again grouped by speaker, and Mahalanobis distance was calculated for F1 and F2. 
-A Mahalanobis distance greater than 6 means that you are a likely outlier
+A Mahalanobis distance greater than 6 means that you are a likely outlierxc
 This was done by taking the covariance and means of F1 and F2. This gives you a grouping based on the vowels’ formants. 
 The Mahalanobis distance was calculated based on F1 and F2
 The data was filtered by each vowel and then outliers were determined. 
@@ -189,44 +194,157 @@ After determining which items were outliers they were filtered out.
 
 Standardization
 The data was grouped by each speaker before calculating the z-scores.
-Z-scores were calculated for each of the measures except for Strength of Excitation which was normalized according to Garellek, et al. 2021
+Z-scores were calculated for each of the measures except for Strength of Excitation which was normalized according to \citet{garellekVoicingGlottalConsonants2021}
 This was done to bring all measurements into the same scale to facilitate better comparisons across speakers for the same measures.
 This measure works best. We are not trying to normalize the data but bring everything into the same frame of reference.
 
 Calculating Residual H1*
 First, a linear mixed effects model was generated with the z-scored H1* as the response variable and the z-scored energy as fixed effect. 
 The uncorrelated interaction of z-scored energy by speaker was treated as random. 
-This is also how residual H1 was calculated in the supplementary material from Chai \& Garellek 2022
+This is also how residual H1 was calculated in the supplementary material from \citet{chaiH1H2Acoustic2022}.
 The resulting residual H1 model’s energy factor was extracted
 Residual h1 was added as a variable to the dataframe by taking the z-scored H1* and subtracting the product of the z-scored energy and the energy factor 
-
 
 %------------------------------------
 \subsection{Statistical Modeling} \label{sec:Statistics}
 %------------------------------------
 
+Each model was Acoustic measure \sim  Phonation*Position + Tone + (1|Speaker:Word:Iter) + (1|Vowel)
 
-
-
+Acoustic measure represents either H1*-H2* (z-score), H1*-A3 (z-score), or residual H1* 
+Phonation*Position is a fixed effect that accounts for the interaction between Phonation and Position
+Tone is another fixed effect for the five different tones across the vowels
+This needs to be separated for a few reasons
+it makes sense for physical reasons
+tone and phonation are so closely linked that we mostly cover our bases by only including the position interaction with phonation, which avoids perfectly collinear interactions
+This was revealed by the rank deficiency that occurs when we cross Phonation with Tone. 
+This also makes sense because there are several tone and phonation contrasts that we were not able to capture.
+(1|Speaker:Word:Iter) is a random effect that accounts for the interaction between these Speaker, Word, and Utterance number.
+This allows us to capture the fact that each speaker said the same words three times each 
+(1|Vowel) is a random effect that captures the fact that each phonation occurred with different vowels. 
+We also know that certain vowels could adversely affect the raw acoustic measures.
 
 % ------------------------------------
 \section{Results} \label{sec:Results}
 % ------------------------------------
 
-
 % ------------------------------------
 \subsection{H1*-H2*} \label{sec:H1H2}
 % ------------------------------------
 
+\begin{table}[!h]
+  \centering
+  \caption{Results of the statistical model for H1*-H2*.}
+  \label{tab:H1H2Results}
+  \begin{tabular}{llllll}
+    \lsptoprule
+     & Estimate & Std. Error & df & t value & p-value \\ \hline
+    \textit{Intercept} & 0.02819 & 0.1033 & 4.755 & 0.273 & 0.796 \\
+    Breathy &&&&& \\
+    Checked &&&&& \\
+    Laryngealized &&&&& \\
+    Position 2 &&&&& \\
+    Position 3 &&&&& \\
+    High tone &&&&& \\
+    Low tone &&&&& \\
+    Mid tone &&&&& \\
+    Rising tone &&&&& \\
+    Breathy:Position 2 &&&&& \\
+    Checked:Position 2 &&&&& \\
+    Laryngealized:Position 2 &&&&& \\
+    Breathy:Position 3 &&&&& \\
+    Checked:Position 3 &&&&& \\
+    Laryngealized:Position 3 &&&&& \\
+    \lspbottomrule
+  \end{tabular}
+\end{table}
 
 % ------------------------------------
 \subsection{H1*-A3} \label{sec:H1A3}
 % ------------------------------------
 
+\begin{table}[!h]
+  \centering
+  \caption{Results of the statistical model for H1*-A3.}
+  \label{tab:H1A3Results}
+  \begin{tabular}{llllll}
+    \lsptoprule
+     & Estimate & Std. Error & df & t value & p-value \\ \hline
+    \textit{Intercept} & 0.02819 & 0.1033 & 4.755 & 0.273 & 0.796 \\
+    Breathy &&&&& \\
+    Checked &&&&& \\
+    Laryngealized &&&&& \\
+    Position 2 &&&&& \\
+    Position 3 &&&&& \\
+    High tone &&&&& \\
+    Low tone &&&&& \\
+    Mid tone &&&&& \\
+    Rising tone &&&&& \\
+    Breathy:Position 2 &&&&& \\
+    Checked:Position 2 &&&&& \\
+    Laryngealized:Position 2 &&&&& \\
+    Breathy:Position 3 &&&&& \\
+    Checked:Position 3 &&&&& \\
+    Laryngealized:Position 3 &&&&& \\
+    \lspbottomrule
+  \end{tabular}
+\end{table}
+
 % ------------------------------------
 \subsection{Residual H1*} \label{sec:ResidH1}
 % ------------------------------------
 
+\begin{table}[!h]
+  \centering
+  \caption{Results of the statistical model for Residual H1*.}
+  \label{tab:H1H2Results}
+  \begin{tabular}{llllll}
+    \lsptoprule
+     & Estimate & Std. Error & df & t value & p-value \\ \hline
+    \textit{Intercept} & 0.02819 & 0.1033 & 4.755 & 0.273 & 0.796 \\
+    Breathy &&&&& \\
+    Checked &&&&& \\
+    Laryngealized &&&&& \\
+    Position 2 &&&&& \\
+    Position 3 &&&&& \\
+    High tone &&&&& \\
+    Low tone &&&&& \\
+    Mid tone &&&&& \\
+    Rising tone &&&&& \\
+    Breathy:Position 2 &&&&& \\
+    Checked:Position 2 &&&&& \\
+    Laryngealized:Position 2 &&&&& \\
+    Breathy:Position 3 &&&&& \\
+    Checked:Position 3 &&&&& \\
+    Laryngealized:Position 3 &&&&& \\
+    \lspbottomrule
+  \end{tabular}
+\end{table}
+
+% ------------------------------------
+\subsection{Model Comparison} \label{sec:Comparison}
+% ------------------------------------
+
+
+According to \citet{casellaStatisticalInference2002}, which is the gold standard for statistical inference in the statistics field, the best way to compare models is by comparing the AIC and the likelihood ratio between the models.
+Using std error to compare models is prone to p-hacking and is heavily frowned upon by statisticians 
+This was done by using the function lrtest() from the lmtest package and using the function AIC() from the base stat package
+The model with the highest Log-Likelihood ratio and lowest AIC is the most robust. 
+
+\begin{table}[!h]
+  \centering
+  \caption{log likelihood scores and AIC for the three statistical models.}
+  \label{tab:Comparison}
+  \begin{tabular}{lll}
+    \lsptoprule
+    Model & Log-Likelihood Ratio & AIC \\
+    \hline
+    H1-H2 model & -21716 & 43469.29 \\
+    H1- A3 model & -19048 & 38134.12 \\
+    Residual H1 model & -16113 & 32264.81 \\
+    \lspbottomrule
+  \end{tabular}
+\end{table}
 
 % ------------------------------------
 \section{Discussion} \label{sec:Discussion}
