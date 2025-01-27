@@ -9,31 +9,47 @@
 ####################################################################
 
 ### install packages if not yet installed
-packages <- c("lme4","lmerTest","tidyverse","viridis", "itsadug", "reshape2", "JWileymisc")
+packages <- c("lme4","lmerTest","tidyverse","viridis", "itsadug", 
+              "reshape2", "JWileymisc", "lmtest")
 if (length(setdiff(packages, rownames(installed.packages()))) > 0) {
   install.packages(setdiff(packages, rownames(installed.packages())))  
 }
 
 ### load required packages
+library(viridis)
+library(knitr)
+library(tidyverse)
+library(itsadug)
+library(ggplot2)
+library(ggbeeswarm)
+library(ggpubr)
+library(reshape2)
 library(lme4)
 library(lmerTest)
-library(tidyverse)
-library(viridis)
-library(itsadug)
-library(reshape2)
+library(lmtest)
+library(ggsignif)
+library(rmarkdown)
 library(readr)
+library(MuMIn)
+library(fastDummies)
+library(extraoperators)
 library(JWileymisc)
+library(multilevelTools)
+
 
 ### loading in the data
 
 df <- read.csv("Voice_Master_Split.csv", header = TRUE)
 
 ### Preprocessing the data
+#rename laryngealized with rearticulated. 
+df['Phonation'][df['Phonation'] == "laryngealized"] <- "rearticulated"
+
 ### convert certain columns into factors.
 df$Phonation <- factor(df$Phonation, levels = c("modal", 
                                                 "breathy", 
                                                 "checked", 
-                                                "laryngealized"))
+                                                "rearticulated"))
 df$Speaker <- df$Speaker %>% factor()
 df$Word <- df$Word %>% factor()
 df$Vowel <- df$Vowel %>% factor()
@@ -45,29 +61,29 @@ colnames(df)[colnames(df) == 'seg_End'] <- 'Duration'
 
 ### Rearranging values for analysis and comparison
 df <- df %>% 
-    mutate(idnum = row_number())
+  mutate(idnum = row_number())
 
 #### h1h2c
 
 df_h1h2c <- df %>% 
-    select(Speaker, 
-           Word, 
-           Iter, 
-           Vowel, 
-           Phonation, 
-           Tone, 
-           Duration,
-           idnum,
-           H1H2c_means001,
-           H1H2c_means002,
-           H1H2c_means003,
-           H1H2c_means004,
-           H1H2c_means005,
-           H1H2c_means006,
-           H1H2c_means007,
-           H1H2c_means008,
-           H1H2c_means009,
-           H1H2c_means010)
+  select(Speaker, 
+         Word, 
+         Iter, 
+         Vowel, 
+         Phonation, 
+         Tone, 
+         Duration,
+         idnum,
+         H1H2c_means001,
+         H1H2c_means002,
+         H1H2c_means003,
+         H1H2c_means004,
+         H1H2c_means005,
+         H1H2c_means006,
+         H1H2c_means007,
+         H1H2c_means008,
+         H1H2c_means009,
+         H1H2c_means010)
 
 df_h1h2c_trans <- melt(df_h1h2c, id = c("Speaker",
                                         "Word", 
@@ -468,7 +484,7 @@ df_fil <- df_fil %>% group_by(Speaker) %>%
          f2z = (sF2 - mean(sF2, na.rm = T))/sd(sF2, na.rm = T),
          b1z = (sB1 - mean(sB1, na.rm = T))/sd(sB1, na.rm = T),
          b2z = (sB2 - mean(sB2, na.rm = T))/sd(sB2, na.rm = T)
-         ) %>%
+  ) %>%
   mutate(log.soe = log10(soe+0.001),
          m.log.soe = mean(log.soe, na.rm=T),
          sd.log.soe = sd(log.soe, na.rm=T),
@@ -495,9 +511,9 @@ df_fil$Position <- df_fil$Position %>% factor()
 ### Calculating Residual h1
 #### Generate the lmer model for residual h1
 model.position.h1c.covariant <- lmer(h1cz ~ energyz + 
-                                    (energyz||Speaker),
-                                    data = df_fil,
-                                    REML = FALSE)
+                                       (energyz||Speaker),
+                                     data = df_fil,
+                                     REML = FALSE)
 
 #### extract the energy factor
 energy.factor <- fixef(model.position.h1c.covariant)[2]
@@ -505,76 +521,311 @@ energy.factor <- fixef(model.position.h1c.covariant)[2]
 #### generate the residual H1 score
 df_fil$H1c.resid = df_fil$h1cz - df_fil$energyz * energy.factor
 
-
 # Generating plots 
 h1h2z_plot <- df_fil %>% ggplot(aes(x = Position,
                                     y = h1h2cz)) +
-    scale_color_viridis(discrete = T) +
-    labs(title = "H1*-H2* by position and phonation",
-        x = "Vowel Position",
-        y = "H1*-H2* (normalized)") +
-    geom_boxplot(aes(colour = Phonation)) +
-    theme_bw()
+  scale_color_viridis(discrete = T) +
+  labs(title = "H1*-H2* by position and phonation",
+       x = "Vowel Position",
+       y = "H1*-H2* (normalized)") +
+  geom_boxplot(aes(colour = Phonation), notch = T) +
+  theme_bw()
 h1h2z_plot
 
 h1a3z_plot <- df_fil %>% ggplot(aes(x = Position,
                                     y = h1a3cz)) +
-    scale_color_viridis(discrete = T) +
-    labs(title = "H1*-A3 by position and phonation",
-        x = "Vowel Position",
-        y = "H1*-A3 (normalized)") +
-    geom_boxplot(aes(colour = Phonation), notch = T) +
-    theme_bw()
+  scale_color_viridis(discrete = T) +
+  labs(title = "H1*-A3 by position and phonation",
+       x = "Vowel Position",
+       y = "H1*-A3 (normalized)") +
+  geom_boxplot(aes(colour = Phonation), notch = T) +
+  theme_bw()
 h1a3z_plot
 
 h1z_plot <- df_fil %>% ggplot(aes(x = Position,
-                                    y = H1c.resid)) +
-    scale_color_viridis(discrete = T) +
-    labs(title = "Residual H1* by position and phonation",
-        x = "Vowel Position",
-        y = "Residual H1* (normalized)") +
-    geom_boxplot(aes(colour = Phonation), notch = T) +
-    theme_bw()
+                                  y = H1c.resid)) +
+  scale_color_viridis(discrete = T) +
+  labs(title = "Residual H1* by position and phonation",
+       x = "Vowel Position",
+       y = "Residual H1* (normalized)") +
+  geom_boxplot(aes(colour = Phonation), notch = T) +
+  theme_bw()
 h1z_plot
 
 ### Linear regression models
-h1h2_model <- lmer(h1h2c~Phonation*Position*Tone + (1|Vowel) + 
-                    (1 + Iter*Word|Speaker), 
-                   data = df_fil)
+h1h2_model <- lmer(h1h2cz ~ Phonation*Position + Tone + (1|Speaker:Word:Iter) + 
+                     (1|Vowel),data = df_fil, REML = F)
 summary(h1h2_model)
 
-h1a3_model <- lmer(h1a3c~Phonation*Position*Tone+(1|Speaker)+(1|Vowel), 
-                   data = df_fil)
+h1a3_model <- lmer(h1a3cz ~ Phonation*Position + Tone + (1|Speaker:Word:Iter) + 
+                     (1|Vowel),data = df_fil, REML = F)
 summary(h1a3_model)
 
-h1_model <- lmer(H1c.resid~Phonation*Position*Tone+(1|Speaker)+(1|Vowel), data = df_fil)
+h1_model <- lmer(H1c.resid ~ Phonation*Position + Tone + (1|Speaker:Word:Iter) + 
+                   (1|Vowel),data = df_fil, REML = F)
 summary(h1_model)
 
-### Linear regression models with only H and L
+cpp_model <- lmer(cppz ~ Phonation*Position + Tone + (1|Speaker:Word:Iter) 
+                  # + (1|Vowel)
+                  ,data = df_fil)
+summary(cpp_model)
 
-df_tone <- df_fil %>% 
-  filter(Tone == "H" | Tone == "L")
+hnr05_model <- lmer(hnr05z ~ Phonation*Position + Tone + (1|Speaker:Word:Iter) 
+                    # + (1|Vowel)
+                    ,data = df_fil)
+summary(hnr05_model)
 
-h1h2_model_tone <- lmer(h1h2c~Phonation*Position*Tone+(1|Speaker)+(1|Vowel), 
-                   data = df_tone)
-summary(h1h2_model_tone)
+hnr15_model <- lmer(hnr15z ~ Phonation*Position + Tone + (1|Speaker:Word:Iter)
+                    # + (1|Vowel)
+                    ,data = df_fil)
+summary(hnr15_model)
 
-h1a3_model_tone <- lmer(h1a3c~Phonation*Position*Tone+(1|Speaker)+(1|Vowel), 
-                   data = df_tone)
-summary(h1a3_model_tone)
+hnr25_model <- lmer(hnr25z ~ Phonation*Position + Tone + (1|Speaker:Word:Iter) 
+                    # + (1|Vowel)
+                    ,data = df_fil)
+summary(hnr25_model)
 
-h1_model_tone <- lmer(H1c.resid~Phonation*Position*Tone+(1|Speaker)+(1|Vowel), 
-                 data = df_tone)
-summary(h1_model_tone)
+hnr35_model <- lmer(hnr35z ~ Phonation*Position + Tone + (1|Speaker:Word:Iter) 
+                    # + (1|Vowel)
+                    ,data = df_fil)
+summary(hnr35_model)
 
-h1h2_model_low <- lmer(h1h2c~Phonation*Position+(1|Speaker)+(1|Vowel), 
-                        data = df_low)
-summary(h1h2_model_low)
+### Model comparisons
+### Models with a higher loglikelihood and lower AIC indicate a better model fit
 
-h1a3_model_low <- lmer(h1a3c~Phonation*Position+(1|Speaker)+(1|Vowel), 
-                        data = df_low)
-summary(h1a3_model_low)
+anova(h1h2_model,h1_model,h1a3_model)
 
-h1_model_low <- lmer(H1c.resid~Phonation*Position+(1|Speaker)+(1|Vowel), 
-                      data = df_low)
-summary(h1_model_low)
+lrtest(h1h2_model,h1_model)
+lrtest(h1a3_model,h1_model)
+
+AIC(h1h2_model)
+AIC(h1a3_model)
+AIC(h1_model)
+
+### Calculating the effect size of the model
+r2_h1 <- r.squaredGLMM(h1_model)
+r2_h1h2 <- r.squaredGLMM(h1h2_model)
+r2_h1a3 <- r.squaredGLMM(h1a3_model)
+
+test_h1 <- modelTest(h1_model)
+
+r2_h1
+r2_h1h2
+r2_h1a3
+
+anova(h1_model)
+
+# Generating plots by speaker
+h1h2z_plot_speaker <- df_fil %>% ggplot(aes(x = Position,
+                                    y = h1h2cz)) +
+  scale_color_viridis(discrete = T) +
+  labs(title = "H1*-H2* by position and phonation",
+       x = "Vowel Position",
+       y = "H1*-H2* (normalized)") +
+  geom_boxplot(aes(colour = Phonation), notch = T) +
+  facet_wrap(.~Speaker)+
+  theme_bw()
+h1h2z_plot_speaker
+
+h1a3z_plot_speaker <- df_fil %>% ggplot(aes(x = Position,
+                                    y = h1a3cz)) +
+  scale_color_viridis(discrete = T) +
+  labs(title = "H1*-A3 by position and phonation",
+       x = "Vowel Position",
+       y = "H1*-A3 (normalized)") +
+  geom_boxplot(aes(colour = Phonation), notch = T) +
+  facet_wrap(.~Speaker)+
+  theme_bw()
+h1a3z_plot_speaker
+
+h1z_plot_speaker <- df_fil %>% ggplot(aes(x = Position,
+                                  y = H1c.resid)) +
+  scale_color_viridis(discrete = T) +
+  labs(title = "Residual H1* by position and phonation",
+       x = "Vowel Position",
+       y = "Residual H1* (normalized)") +
+  geom_boxplot(aes(colour = Phonation), notch = T) +
+  facet_wrap(.~Speaker)+
+  theme_bw()
+h1z_plot_speaker
+
+cpp_plot_speaker <- df_fil %>% ggplot(aes(x = Position,
+                                          y = cppz)) +
+  scale_color_viridis(discrete = T) +
+  labs(title = "CPP by position and phonation",
+       x = "Vowel Position",
+       y = "CPP (normalized)") +
+  geom_boxplot(aes(colour = Phonation), notch = T) +
+  facet_wrap(.~Speaker)+
+  theme_bw()
+cpp_plot_speaker
+
+cpp_plot <- df_fil %>% ggplot(aes(x = Position,
+                                          y = cppz)) +
+  scale_color_viridis(discrete = T) +
+  labs(title = "CPP by position and phonation",
+       x = "Vowel Position",
+       y = "CPP (normalized)") +
+  geom_boxplot(aes(colour = Phonation), notch = T) +
+  # facet_wrap(.~Speaker)+
+  theme_bw()
+cpp_plot
+
+## Loess smooths
+
+h1h2_line <- df_fil %>% 
+  ggplot(aes(x = time, 
+             y=h1h2cz, 
+             group=Phonation, 
+             colour=Phonation)) +
+  geom_smooth(method = "loess") +
+  scale_color_viridis(discrete=TRUE) +
+  labs(title = "H1*-H2* measure across the vowel", 
+       x = "Normalized time (% of vowel duration)",
+       y = "H1*-H2* (normalized)") +
+  theme_bw()
+h1h2_line
+
+h1a3_line <- df_fil %>% 
+  ggplot(aes(x = time, 
+             y = h1a3cz, 
+             group=Phonation, 
+             colour=Phonation)) +
+  geom_smooth(method = "loess") +
+  scale_color_viridis(discrete=TRUE) +
+  labs(title = "H1*-A3 measure across the vowel", 
+       x = "Normalized time (% of vowel duration)",
+       y = "H1*-A3 (normalized)") +
+  theme_bw()
+h1a3_line
+
+h1_line <- df_fil %>% 
+  ggplot(aes(x = time, 
+             y = H1c.resid, 
+             group=Phonation, 
+             colour=Phonation)) +
+  geom_smooth(method = "loess") +
+  scale_color_viridis(discrete=TRUE) +
+  labs(title = "Residual H1* measure across the vowel", 
+       x = "Normalized time (% of vowel duration)",
+       y = "Residual H1* (normalized)") +
+  theme_bw()
+h1_line
+
+ggsave(filename = "H1_line.png",
+       plot = h1_line,
+       width = 5,
+       height = 3,
+       dpi = 300,
+       units = "in")
+
+ggsave(filename = "H1A3_line.png",
+       plot = h1a3_line,
+       width = 5,
+       height = 3,
+       dpi = 300,
+       units = "in")
+
+ggsave(filename = "H1H2_line.png",
+       plot = h1h2_line,
+       width = 5,
+       height = 3,
+       dpi = 300,
+       units = "in")
+
+### Checking gender effects
+df_fil <- df_fil %>% 
+  mutate(Gender = if_else(str_detect(Speaker, 'f'), "Female", "Male"))
+
+df_fil$Gender.f <- df_fil$Gender %>% factor()
+
+#creating the contrast matrix manually by modifying the dummy coding scheme
+(c <-contr.treatment(2))
+my.coding <- matrix(rep(1/2, 2), ncol=1)
+my.simple <- c-my.coding
+my.simple
+
+contrasts(df_fil$Gender.f) <- my.simple
+df_fil$Gender.f 
+
+### model for gender effects
+h1h2_model_gender <- lmer(h1h2cz~Phonation*Position + Tone + Gender + 
+                          (1|Vowel) + (1|Speaker:Word:Iter), 
+                         data = df_fil)
+summary(h1h2_model_gender)
+
+h1_model_gender <- lmer(H1c.resid~Phonation*Position + Tone + Gender + 
+                        (1|Vowel) + (1|Speaker:Word:Iter), 
+                       data = df_fil)
+summary(h1_model_gender)
+
+### Model comparisons
+anova(h1_model, h1_model_gender)
+anova(h1h2_model, h1h2_model_gender)
+
+# Plotting with gender
+h1_line_gender <- df_fil %>% 
+  ggplot(aes(x = time, 
+             y = H1c.resid, 
+             group=Phonation, 
+             colour=Phonation)) +
+  geom_smooth(method = "loess") +
+  scale_color_viridis(discrete=TRUE) +
+  facet_wrap(.~Gender)+
+  labs(title = "Residual H1* measure across the vowel", 
+       x = "Normalized time (% of vowel duration)",
+       y = "Residual H1* (normalized)") +
+  theme_bw()
+h1_line_gender
+
+h1h2_line_gender <- df_fil %>% 
+  ggplot(aes(x = time, 
+             y=h1h2cz, 
+             group=Phonation, 
+             colour=Phonation)) +
+  geom_smooth(method = "loess") +
+  scale_color_viridis(discrete=TRUE) +
+  facet_wrap(.~Gender)+
+  labs(title = "H1*-H2* measure across the vowel", 
+       x = "Normalized time (% of vowel duration)",
+       y = "H1*-H2* (normalized)") +
+  theme_bw()
+h1h2_line_gender
+
+# h1h2Latex <- kable(coef(summary(h1h2_model)),format = "latex", digits = 5)
+# h1a3Latex <- kable(coef(summary(h1a3_model)),format = "latex", digits = 5)
+# h1Latex <- kable(coef(summary(h1_model)),format = "latex", digits = 5)
+# 
+# kable(coef(summary(h1_model)),format = "markdown", digits = 32)
+# 
+# # Install the stargazer package if you haven't already
+# install.packages("stargazer")
+# 
+# # Load necessary packages
+# library(stargazer)
+# library(lme4)
+# 
+# # Fit an lmer model
+# model <- lmer(Reaction ~ Days + (Days | Subject), data = sleepstudy)
+# 
+# # Extract coefficients and standard errors
+# summary_model <- summary(model)
+# coefs <- summary_model$coefficients
+# se <- coefs[, "Std. Error"]
+# t_values <- coefs[, "t value"]
+# 
+# # Create a data frame to hold the results
+# results <- data.frame(
+#   Estimate = coefs[, "Estimate"],
+#   StdError = se,
+#   tValue = t_values
+# )
+# 
+# # Create the LaTeX table
+# stargazer(as.matrix(results), type = "latex", title = "Linear Mixed-Effects Model Results",
+#           single.row = TRUE, digits = 3, no.space = TRUE,
+#           covariate.labels = c("Intercept", "Days"),
+#           dep.var.labels.include = FALSE,
+#           column.labels = c("Estimate", "Std. Error", "t Value"),
+#           omit.table.layout = "n")
+
