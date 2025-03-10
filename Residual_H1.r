@@ -792,9 +792,65 @@ h1h2_line_gender <- df_fil %>%
   theme_bw()
 h1h2_line_gender
 
-# h1h2Latex <- kable(coef(summary(h1h2_model)),format = "latex", digits = 5)
-# h1a3Latex <- kable(coef(summary(h1a3_model)),format = "latex", digits = 5)
-# h1Latex <- kable(coef(summary(h1_model)),format = "latex", digits = 5)
+### Orthogonal coding for position
+df_fil$time <- as.numeric(df_fil$time)
+
+df_fil$Position.f1 <- cut(df_fil$time, breaks = c(0,4,7,10), 
+                         labels = c("Initial", "Middle", "End"))
+df_fil$Position.f1 <- df_fil$Position.f %>% factor(levels = c("Initial", "Middle", "End"))
+table(df_fil$Position.f1)
+
+df_fil$Position.f2 <- cut(df_fil$time, 3, ordered = TRUE)
+table(df_fil$Position.f2)
+
+contrasts(df_fil$Position.f1) <- contr.poly(3)
+
+### Orthogonal coding for Tone
+df_fil$Tone.f1 <- df_fil$Tone %>% factor(levels = c("H", "M", "L", "F", "R"))
+
+#assigning the orthogonal polynomial contrasts to Tone
+contrasts(df_fil$Tone.f1) <- contr.poly(5)
+
+#running the model with the orthogonal coding
+h1h2_model_position <- lmer(h1h2cz ~ Phonation*Position.f1 + Tone + 
+                            (1|Speaker:Word:Iter) + (1|Vowel), 
+                           data = df_fil)
+summary(h1h2_model_position)
+
+h1_model_position <- lmer(H1c.resid ~ Phonation*Position.f1 + Tone + 
+                          (1|Speaker:Word:Iter) + (1|Vowel), 
+                         data = df_fil)
+summary(h1_model_position)
+
+### Model comparisons
+anova(h1h2_model, h1h2_model_position)
+anova(h1_model, h1_model_position)
+
+anova(h1h2_model_position, h1_model_position)
+AIC(h1h2_model_position)
+AIC(h1_model_position)
+
+h1h2Latex <- kable(coef(summary(h1h2_model_position)),format = "latex", digits = 5)
+h1a3Latex <- kable(coef(summary(h1a3_model)),format = "latex", digits = 5)
+h1Latex <- kable(coef(summary(h1_model_position)),format = "latex", digits = 5)
+
+### Running the model with orthogonal coding for position and tone
+h1h2_model_position_tone <- lmer(h1h2cz ~ Phonation*Position.f1 + Tone.f1 + 
+                                (1|Speaker:Word:Iter) + (1|Vowel), 
+                               data = df_fil)
+summary(h1h2_model_position_tone)
+
+h1_model_position_tone <- lmer(H1c.resid ~ Phonation*Position.f1 + Tone.f1 + 
+                              (1|Speaker:Word:Iter) + (1|Vowel), 
+                             data = df_fil)
+summary(h1_model_position_tone)
+
+AIC(h1h2_model_position_tone)
+AIC(h1_model_position_tone)
+
+latex_h1h2 <- kable(coef(summary(h1h2_model_position_tone)),format = "latex", digits = 5)
+latex_h1 <- kable(coef(summary(h1_model_position_tone)),format = "latex", digits = 5)
+
 # 
 # kable(coef(summary(h1_model)),format = "markdown", digits = 32)
 # 
@@ -828,4 +884,5 @@ h1h2_line_gender
 #           dep.var.labels.include = FALSE,
 #           column.labels = c("Estimate", "Std. Error", "t Value"),
 #           omit.table.layout = "n")
+
 
